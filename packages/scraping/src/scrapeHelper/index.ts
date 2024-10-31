@@ -1,11 +1,10 @@
 import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { JSDOM } from "jsdom";
-import puppeteer from "puppeteer";
 import { ScrapeResult, ScrapflyClient } from "scrapfly-sdk";
 import { ScrapeConfig } from "scrapfly-sdk";
 import { z } from "zod";
-import { findJobPostingUrl } from "~/scraping/helper";
+import { findJobPostingUrl } from "../scraping/helper";
 
 // helper function to extract all the urls from the company domain
 export const extractUrls = (content: string, baseUrl: string): string[] => {

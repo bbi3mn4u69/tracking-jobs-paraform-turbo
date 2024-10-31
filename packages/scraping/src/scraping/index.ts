@@ -1,14 +1,13 @@
 import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { convert } from "html-to-text";
-import { OpenAI } from "openai";
 import puppeteer, { Page } from "puppeteer";
 import * as z from "zod";
 
 import {
   findTheJobsListingUrlUsingAI,
   ScrapeProtencialUrlsWithScrapefly,
-} from "~/scrapeHelper";
+} from "../scrapeHelper/index";
 import {
   combinePathToACompleteUrl,
   findTheProtencialJobTitles,

@@ -124,7 +124,7 @@
 
 
 import { NextResponse } from "next/server";
-import { ScrapingService } from "~/scraping";
+import { ScrapingService } from "@acme/scraping";
 
 
 export async function GET() {
