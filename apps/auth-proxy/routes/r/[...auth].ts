@@ -9,10 +9,10 @@ export default eventHandler(async (event) =>
     trustHost: !!process.env.VERCEL,
     redirectProxyUrl: process.env.AUTH_REDIRECT_PROXY_URL,
     providers: [
-      Discord({
-        clientId: process.env.AUTH_DISCORD_ID,
-        clientSecret: process.env.AUTH_DISCORD_SECRET,
-      }),
+      // Discord({
+      //   clientId: process.env.AUTH_DISCORD_ID,
+      //   clientSecret: process.env.AUTH_DISCORD_SECRET,
+      // }),
     ],
   }),
 );
