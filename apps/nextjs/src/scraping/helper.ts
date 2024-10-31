@@ -88,7 +88,7 @@ export const foo = ({
   pageLayout: string;
   jobTitle: string;
 }) => {
-  return `Given the page layout: ${pageLayout} and the job titles: ${jobTitle}, with the given job title and the layout of the website, please find the url accosiate with that job title that potencial leading to the job details page. Please return the whole url only, do not remove anything from the url.`;
+  return `Given the page layout: ${pageLayout} and the job titles: ${jobTitle}, with the given job title and the layout of the website, please find the url or path accosiate with that job title. This should be in the parrent div of that job title that potencial leading to the job details page. Please return the whole url or path only, do not remove anything from the url or path. Please advoid url from CDN that we cant access it`;
 };
 
 export const isThisUrlTheJobListingPage = ({
@@ -99,11 +99,9 @@ export const isThisUrlTheJobListingPage = ({
   return `Given the page layout: ${pageLayout}. With the given page layout please identify is the page layout contain the job listing information (must contain the job title). please return true if the page layout contain the job listing information, otherwise return false`;
 };
 
-
 export const isPath = ({ url }: { url: string }) => {
-  return `Given the url: ${url}. Is this url a path? Please return true if the url is a path, otherwise return false`;
+  return `Given the input: ${url}. Check if this input represents only a path (e.g., "/path/to/resource") without the full scheme (http/https) and domain. Return true if it's a path, otherwise return false.`;
 };
-
 
 export const combinePathToACompleteUrl = ({
   domain,
@@ -115,7 +113,6 @@ export const combinePathToACompleteUrl = ({
   return `Given the domain: ${domain} and the path: ${path}, 
   The URL must be valid. Combine it with the domain to form a complete URL: ${domain}${path}`;
 };
-
 
 export const isThisPageLayoutContainTheJobDetails = ({
   pageLayout,
@@ -129,4 +126,27 @@ export const isThisPageLayoutContainTheJobDetails = ({
   return `With the given page layout ${pageLayout}, we aready know that this url ${domain} is leading to the job details page. However, we need to confirm that the page layout contain the job details and relevant job titles: ${jobTitles.map(
     (jobTitle) => `"${jobTitle}"`,
   )}. Please return true if the page layout contain the job details , otherwise return false`;
+};
+
+export const isThisUrlContainTheInformationNeeded = ({
+  pageContent,
+}: {
+  pageContent: string;
+}) => {
+  return `Given the content of a webpage: ${pageContent}, check if it includes any of the following pieces of information:
+roleDescription: Detailed description of the role (can be optional)
+roleSalary: Salary information (can be optional)
+dateFirstPosted: Date when the job was first posted (can be optional)
+status: Current status of the job (e.g., open, closed)
+Return true if any of these details are found within the page content ${pageContent}; otherwise, return false.`;
+};
+
+export const reCombineThePathToACompleteUrl = ({
+  domain,
+  path,
+}: {
+  domain: string;
+  path: string;
+}) => {
+  return `Given the domain: ${domain} and the path: ${path}, the url is not valid, please remove the path from the domain ${domain} and join the based domain after remove with the path ${path};`;
 };

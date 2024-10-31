@@ -1,27 +1,28 @@
-import { ScrapflyClient, ScrapeConfig, ScrapeResult } from "scrapfly-sdk";
-import { OpenAI } from "openai";
 import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
-import * as z from "zod";
 import { convert } from "html-to-text";
-
+import { OpenAI } from "openai";
 import puppeteer, { Page } from "puppeteer";
+import * as z from "zod";
+
 import {
-  potentcialJobPostingButtonName,
+  findTheJobsListingUrlUsingAI,
+  ScrapeProtencialUrlsWithScrapefly,
+} from "~/scrapeHelper";
+import {
+  combinePathToACompleteUrl,
   findTheProtencialJobTitles,
   findTheSelectorsOfTheJobTitles,
-  getJobDetails,
-  isThisTheJobPostingPage,
-  isThisUrlTheJobListingPage,
   foo,
+  getJobDetails,
   isPath,
-  combinePathToACompleteUrl,
   isThisPageLayoutContainTheJobDetails,
+  isThisTheJobPostingPage,
+  isThisUrlContainTheInformationNeeded,
+  isThisUrlTheJobListingPage,
+  potentcialJobPostingButtonName,
+  reCombineThePathToACompleteUrl,
 } from "./helper";
-import {
-  ScrapeProtencialUrlsWithScrapefly,
-  findTheJobsListingUrlUsingAI,
-} from "~/scrapeHelper";
 
 export class ScrapingService {
   private static instance: ScrapingService;
@@ -311,7 +312,10 @@ export class ScrapingService {
         jobTitles,
       }),
     });
-    console.log("Return from AI this page layout is contain the job details:", object.isThisLayoutContainTheJobDetails)
+    console.log(
+      "Return from AI this page layout is contain the job details:",
+      object.isThisLayoutContainTheJobDetails,
+    );
     return object.isThisLayoutContainTheJobDetails;
   }
 
@@ -412,18 +416,16 @@ export class ScrapingService {
     // Get the page layout
     const pageLayout = await this.getPageLayout(page, false);
     let jobUrl: string[] | null = [];
-    // scrape with identify button
-    jobUrl = await this.SearchAndScrapeWebsiteWithIdentifyButton({
-      pageLayout,
+    // scrape with out the identify button
+    jobUrl = await this.SearchAndScrapeTheWebWithoutIdentifyButton({
       page,
       domainUrl: url,
     });
-    // scrape with out the identify button
     if (!jobUrl) {
-      // console.log(
-      //   `button is not identified, start scraping the website without identify button`,
-      // );
-      jobUrl = await this.SearchAndScrapeTheWebWithoutIdentifyButton({
+      console.log("cant use regular scraping,try start scraping with button");
+      // scrape with identify button
+      jobUrl = await this.SearchAndScrapeWebsiteWithIdentifyButton({
+        pageLayout,
         page,
         domainUrl: url,
       });
@@ -507,7 +509,6 @@ export class ScrapingService {
     domainUrl: string;
   }) {
     const pageLayout = await this.getTagWithHref(page);
-    // console.log(`scrape the website without identify button`);
     const jobLinks: string[] = [];
     const { object: jobTitleNames } = await generateObject({
       model: openai("gpt-4o-mini"),
@@ -536,14 +537,15 @@ export class ScrapingService {
         }),
       });
 
-      const { object: isThisAPath } = await generateObject({
+      const { object: path } = await generateObject({
         model: openai("gpt-4o-mini"),
         schema: z.object({
           isThisAPath: z.boolean(),
         }),
         prompt: isPath({ url: object.url }),
       });
-      if (isThisAPath.isThisAPath) {
+      if (path.isThisAPath) {
+        // TODO: this one some time wokring unexpectedly, need to validate the page layout more after log the url out
         const { object: url } = await generateObject({
           model: openai("gpt-4o-mini"),
           schema: z.object({
@@ -554,7 +556,32 @@ export class ScrapingService {
             path: object.url,
           }),
         });
-        jobLinks.push(url.url);
+        console.log("url combined from AI", url.url);
+        console.log("validate the url");
+        const isValidUrl =
+          await this.validateThePageLayoutAfterGettingTheTargetUrl(url.url);
+        console.log("isValidUrl", isValidUrl);
+        if (!isValidUrl) {
+          console.log("recombine the url");
+          const { object: url } = await generateObject({
+            model: openai("gpt-4o-mini"),
+            schema: z.object({
+              url: z.string(),
+            }),
+            prompt: reCombineThePathToACompleteUrl({
+              domain: domainUrl,
+              path: object.url,
+            }),
+          });
+          console.log("re validate the url after recombine the url");
+          const isValidUrl =
+            await this.validateThePageLayoutAfterGettingTheTargetUrl(url.url);
+          if (!isValidUrl) {
+            continue;
+          }
+          console.log(`URL combinded from AI: ${url.url}`);
+          jobLinks.push(url.url);
+        }
       } else {
         const url = object.url;
         if (url) {
@@ -563,6 +590,34 @@ export class ScrapingService {
       }
     }
     return jobLinks.length > 0 ? jobLinks : null;
+  }
+  private async validateThePageLayoutAfterGettingTheTargetUrl(url: string) {
+    // validate page again after getting the url
+    const width = 1024;
+    const height = 1600;
+    const browser = await puppeteer.launch({
+      defaultViewport: { width, height },
+      headless: false,
+    });
+    const page = await browser.newPage();
+    await page.goto(url);
+    await this.scrollToBottom(page);
+    const initialLayout = await page.content();
+    const pageContent = convert(initialLayout);
+
+    const { object } = await generateObject({
+      model: openai("gpt-4o-mini"),
+      schema: z.object({
+        isThisUrlContainTheInformationNeeded: z.boolean(),
+      }),
+      prompt: isThisUrlContainTheInformationNeeded({ pageContent }),
+    });
+    if (object.isThisUrlContainTheInformationNeeded) {
+      await browser.close();
+      return true;
+    }
+    await browser.close();
+    return false;
   }
   // scroll to the bottom of the page
   private async scrollToBottom(page: Page) {
